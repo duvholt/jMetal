@@ -19,6 +19,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import org.uma.jmetal.algorithm.Algorithm;
 import org.uma.jmetal.algorithm.InteractiveAlgorithm;
@@ -77,7 +79,7 @@ public class ARPPSORunner extends AbstractAlgorithmRunner {
     SelectionOperator<List<DoubleSolution>, DoubleSolution> selection;
     String referenceParetoFront = "" ;
     int numberIterations =1;//21
-    String problemName = "DTLZ4" ;
+    String problemName = "DTLZ6" ;
     int numberObjectives = 3;
     int numberVariables = 12;
     String algorithmName ="WASFGA";
@@ -85,7 +87,7 @@ public class ARPPSORunner extends AbstractAlgorithmRunner {
     int aspOrden =1;
     int populationSize=100;
     int iterationIntern =20;
-    String aspName = "ppsn_asp/ASP_DTLZ4_3Obj.dat";
+    String aspName = "ppsn_asp/ASP_DTLZ1_3Obj.dat";
     /*String problemName ;
     if (args.length == 1) {
       problemName = args[0];
@@ -106,6 +108,7 @@ public class ARPPSORunner extends AbstractAlgorithmRunner {
         iterationIntern = Integer.parseInt(args[5]);
       }
     }
+
 
     switch (problemName){
       case "DTLZ1":
@@ -306,18 +309,18 @@ public class ARPPSORunner extends AbstractAlgorithmRunner {
       if(algorithmName.equalsIgnoreCase("RNSGAII")) {
           algorithmRun = new RNSGAIIBuilder<DoubleSolution>(problem, crossover, mutation, referencePoint,epsilon)
              .setSelectionOperator(selection)
-              .setMaxEvaluations(20000)
+              .setMaxEvaluations(10000)
              .setPopulationSize(populationSize)
             .build() ;
       }else {
-        algorithmRun = new WASFGA<DoubleSolution>(problem, populationSize, 200, crossover, mutation,
+        algorithmRun = new WASFGA<DoubleSolution>(problem, populationSize, 100, crossover, mutation,
             selection, new SequentialSolutionListEvaluator<DoubleSolution>(), referencePoint,
             weightsName);
       }
       algorithm = new ArtificialDecisionMakerPSOBuilder<DoubleSolution>(problem, algorithmRun,iterationIntern)
-          .setConsiderationProbability(0.1)//0.3
+          .setConsiderationProbability(0.9)//0.3
           .setMaxEvaluations(10)
-          .setTolerance(0.001)//0.001
+          .setTolerance(0.9)//0.001
           .setAsp(asp)
           .setAspFile(aspName)
           .setAspOrden(aspOrden)

@@ -44,12 +44,15 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
   protected ReferencePoint currentReferencePoint;
   protected List<Double> distances;
   protected List<Double> distancesRP;
+  private List<Double> min = null;
+  private List<Double> max = null;
   private S solutionRun=null;
   public ARP(Problem<S> problem,
       InteractiveAlgorithm<S,List<S>> algorithm,double considerationProbability,double tolerance,int maxEvaluations
   ,List<Double> rankingCoeficient,int numberReferencePoints,List<Double> asp,String aspFile, int aspOrden) {
     super(problem, algorithm);
     this.considerationProbability = considerationProbability;
+    this.varyingProbability = considerationProbability;
     this.tolerance = tolerance;
     numberOfObjectives=problem.getNumberOfObjectives();
     this.random = JMetalRandom.getInstance();
@@ -62,16 +65,29 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
     this.allReferencePoints = new ArrayList<>();
     this.distances = new ArrayList<>();
     this.distancesRP = new ArrayList<>();
-    if(aspFile!=null){
+    List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
+    min = auxAsp.get(0);
+    max = auxAsp.get(2);
+    if(aspOrden==3) {
 
-      //asp = this.getAspirationLevel(aspFile).get(aspOrden);
-      List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
+      asp = new ArrayList<>();
+      for (int i = 0; i < min.size() ; i++) {
+        double value=JMetalRandom.getInstance().nextDouble(min.get(i),max.get(i));
+        asp.add(value);
+      }
+    }
+    else{
+      if (aspFile != null) {
+
+        asp = this.getAspirationLevel(aspFile).get(aspOrden);
+     /* List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
       List<Double> min = auxAsp.get(0);
       List<Double> max = auxAsp.get(2);
       asp = new ArrayList<>();
       for (int i = 0; i < min.size() ; i++) {
         double value=JMetalRandom.getInstance().nextDouble(min.get(i),max.get(i));
         asp.add(value);
+      }*/
       }
     }
     if(asp!=null){
@@ -123,23 +139,43 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
       asp = idealOjectiveVector;
   }
 
+  private IdealPoint createReferencePointIdeal(List<Double> list){
+    IdealPoint solution =  new IdealPoint(numberOfObjectives);
+    for (int i = 0; i < list.size() ; i++) {
+      solution.setObjective(i,list.get(i));
+      solution.setVariableValue(i,list.get(i));
+    }
+    return solution;
+  }
+  private NadirPoint createReferencePointNadir(List<Double> list){
+    NadirPoint solution =  new NadirPoint(numberOfObjectives);
+    for (int i = 0; i < list.size() ; i++) {
+      solution.setObjective(i,list.get(i));
+      solution.setVariableValue(i,list.get(i));
+    }
+    return solution;
+  }
   @Override
   protected List<ReferencePoint> generatePreferenceInformation() {
 
-    idealOjectiveVector = new IdealPoint(numberOfObjectives);
-    nadirObjectiveVector = new NadirPoint(numberOfObjectives);
+    idealOjectiveVector = createReferencePointIdeal(min);//new IdealPoint(numberOfObjectives);
+    nadirObjectiveVector = createReferencePointNadir(max);
 
     List<S> solutions = new ArrayList<>();
     S sol = problem.createSolution();
     problem.evaluate(sol);
     solutions.add(sol);
-    updateObjectiveVector(solutions);
+   // updateObjectiveVector(solutions);
    // solutionRun = solutions.get(0);
     List<ReferencePoint> referencePoints  = new ArrayList<>();
     for (int i=0;i < numberReferencePoints;i++){
       ReferencePoint referencePoint = new IdealPoint(numberOfObjectives);
       for (int j = 0; j < numberOfObjectives; j++) {
         double rand = random.nextDouble(0.0, 1.0);
+       // double mult=0.25;
+        //if(j==1){
+         // mult=10;
+       // }
         if (rand < considerationProbability * rankingCoeficient.get(i)) {
           referencePoint.setObjective(j, asp.getObjective(j));
         } else {
@@ -179,6 +215,7 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
 
   @Override
   protected void initProgress() {
+    this.distances = new ArrayList<>();
     evaluations =0;
     varyingProbability = considerationProbability;
   }
@@ -222,16 +259,26 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
       List<Integer> indexOfRelevantObjectiveFunctions, List<S> front,List<S> paretoOptimalSolutions) {
     List<ReferencePoint> result = new ArrayList<>();
     List<S> temporal = new ArrayList<>(front);
-
+    S solution = null;
+  //  if(distances.isEmpty()){
+      //solution=(S)getSolutionFromRP(currentReferencePoint);//getMaxSolution(temporal, currentReferencePoint);
+   // }else {
+     solution = getSolution(temporal, currentReferencePoint);
+   // }
+    //  if(solutionRun!=null) {
+   // solution=getSolution(temporal, currentReferencePoint);
+    //}else{
+    // solution = getMaxSolution(temporal, currentReferencePoint);//front.get(JMetalRandom.getInstance().nextInt(0,front.size()-1));
+    //}
+    solutionRun = solution;
+    temporal.remove(solution);
     for(int numRefPoint=0;numRefPoint<numberReferencePoints;numRefPoint++){
-      if(currentReferencePoint!=null) {
-        calculateDistanceRP(currentReferencePoint, asp);
-       // calculateDistance(solutionRun, asp);
+      if(solutionRun!=null) {//currentReferencePoint
+       // calculateDistanceRP(currentReferencePoint, asp);
+        calculateDistance(solutionRun, asp);
        // calculateDistanceRP(solutionRun, currentReferencePoint);
       }
-      S solution = getSolution(temporal,currentReferencePoint);
-      solutionRun = solution;
-      temporal.remove(solution);
+
      // if (indexOfRelevantObjectiveFunctions.size() == numberOfObjectives) {
        // result.add(getReferencePointFromSolution(solution));
       //} else {
@@ -242,7 +289,9 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
                 asp.getObjective(i) - (asp.getObjective(i) - solution.getObjective(i)) / 2);
           } else {
             //predict the i position of reference point
-            referencePoint.setObjective(i, prediction(i,paretoOptimalSolutions,solution));
+            referencePoint.setObjective(i, prediction(i,front,solution));//paretoOptimalSolutions
+           // referencePoint.setObjective(i,
+             ///   asp.getObjective(i) - (asp.getObjective(i) - solution.getObjective(i)) / 2);
           }
         }
         result.add(referencePoint);
@@ -274,6 +323,7 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
     //    getPointFromReferencePoint(referencePoint));
     double distance = euclidean
         .getDistance((DoubleSolution) solution, getSolutionFromRP(referencePoint));
+    //System.out.println(distance);
     distances.add(distance);
   }
   private DoubleSolution getSolutionFromRP(ReferencePoint referencePoint){
@@ -353,6 +403,22 @@ public class ARP<S extends Solution<?>> extends ArtificialDecisionMaker<S,List<S
       map.put(distance, solution);
     }
     result = map.get(map.firstKey());
+    return result;
+  }
+  private S getMaxSolution(List<S> front, ReferencePoint referencePoint) {
+    S result = front.get(0);
+    EuclideanDistanceBetweenSolutionsInObjectiveSpace euclidean = new EuclideanDistanceBetweenSolutionsInObjectiveSpace();
+    // EuclideanDistance euclideanDistance = new EuclideanDistance();
+    SortedMap<Double, S> map = new TreeMap<>();
+    DoubleSolution aux = getSolutionFromRP(referencePoint);
+    for (S solution : front) {
+      // double distance = euclideanDistance.compute(getPointFromSolution(solution),
+      //     getPointFromReferencePoint(referencePoint));
+      // map.put(distance, solution);
+      double distance = euclidean.getDistance(solution,aux);
+      map.put(distance, solution);
+    }
+    result = map.get(map.lastKey());
     return result;
   }
   private Point getPointFromSolution(S solution) {

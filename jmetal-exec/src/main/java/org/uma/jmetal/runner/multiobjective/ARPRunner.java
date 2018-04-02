@@ -82,13 +82,13 @@ public class ARPRunner extends AbstractAlgorithmRunner {
    // String problemName = "DTLZ1" ;
     //int numberObjectives = 3;
     //int numberVariables = 7;
-    String problemName = "DTLZ1" ;
+    String problemName = "DTLZ4" ;
     int numberObjectives = 3;
-    int numberVariables = 7;
-    String algorithmName ="WASFGA";
-    String weightsName = "MOEAD_Weights/W3D_100.dat";
+    int numberVariables = 12;
+    String algorithmName ="RNSGAII";
+    String weightsName = "MOEAD_Weights/W3_100.dat";
     int populationSize=100;
-    String aspName = "ppsn_asp/ASP_DTLZ1_3Obj.dat";
+    String aspName = "ppsn_asp/ASP_DTLZ6_5bj.dat";
     int aspOrden =1;
     /*if (args.length == 1) {
       problemName = args[0];
@@ -304,17 +304,17 @@ public class ARPRunner extends AbstractAlgorithmRunner {
         algorithmRun = new RNSGAIIBuilder<DoubleSolution>(problem, crossover, mutation,
             referencePoint, epsilon)
             .setSelectionOperator(selection)
-            .setMaxEvaluations(20000)
+            .setMaxEvaluations(10000)
             .setPopulationSize(populationSize)
             .build();
       }else {
-        algorithmRun = new WASFGA<DoubleSolution>(problem, populationSize, 200, crossover, mutation,
+        algorithmRun = new WASFGA<DoubleSolution>(problem, populationSize, 100, crossover, mutation,
             selection, new SequentialSolutionListEvaluator<DoubleSolution>(), referencePoint,weightsName);
       }
       algorithm = new ARPBuilder<DoubleSolution>(problem, algorithmRun)
-          .setConsiderationProbability(0.1)
+          .setConsiderationProbability(0.9)
           .setMaxEvaluations(10)
-          .setTolerance(0.001)
+          .setTolerance(0.9)
           .setAsp(asp)
           .setAspFile(aspName)
           .setAspOrden(aspOrden)

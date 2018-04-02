@@ -50,13 +50,13 @@ public class NSGAIIIRunner extends AbstractAlgorithmRunner {
 	    SelectionOperator<List<DoubleSolution>, DoubleSolution> selection;
 
 	    List<String> problems = new ArrayList<>();
-	    problems.add("DTLZ1");
-	    problems.add("DTLZ2");
-    problems.add("DTLZ3");
-    problems.add("DTLZ4");
-    problems.add("DTLZ5");
+	  //  problems.add("DTLZ1");
+	   // problems.add("DTLZ2");
+   // problems.add("DTLZ3");
+   // problems.add("DTLZ4");
+   // problems.add("DTLZ5");
     problems.add("DTLZ6");
-    problems.add("DTLZ7");
+  //  problems.add("DTLZ7");
     for (String problemName:problems) {
 
 
@@ -64,7 +64,7 @@ public class NSGAIIIRunner extends AbstractAlgorithmRunner {
 
     //problem = ProblemUtils.loadProblem(problemName);
 
-    for (int i = 4; i <7 ; i=i+2) {
+    for (int i = 6; i <7 ; i=i+2) {
       problem = new DTLZ1(7,i);
       switch (problemName){
         case "DTLZ1":

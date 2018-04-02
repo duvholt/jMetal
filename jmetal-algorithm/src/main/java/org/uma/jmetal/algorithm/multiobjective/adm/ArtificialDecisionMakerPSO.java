@@ -55,6 +55,8 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
   private SolutionListEvaluator<DoubleSolution> evaluator;
   private DoubleProblem auxProblem;
   private int iterationIntern;
+  private List<Double> min = null ;
+  private List<Double> max = null;
  // private List<DoubleSolution> prueba;
   public ArtificialDecisionMakerPSO(Problem<S> problem,
       InteractiveAlgorithm<S, List<S>> algorithm,double considerationProbability,double tolerance,int maxEvaluations
@@ -65,6 +67,7 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
     auxProblem = new DTLZ1(problem.getNumberOfObjectives(),problem.getNumberOfObjectives());
 
     this.considerationProbability = considerationProbability;
+    this.varyingProbability = considerationProbability;
     this.tolerance = tolerance;
     this.numberOfObjectives=problem.getNumberOfObjectives();
     this.evaluator = evaluator;
@@ -79,20 +82,31 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
     this.distances = new ArrayList<>();
     this.distancesRP = new ArrayList<>();
     this.iterationIntern = iterationIntern;
-    if(aspFile!=null){
+    List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
+    min = auxAsp.get(0);
+     max = auxAsp.get(2);
+    if(aspOrden==3) {
 
-      //asp = this.getAspirationLevel(aspFile).get(aspOrden);
-      List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
-      List<Double> min = auxAsp.get(0);
-      List<Double> max = auxAsp.get(2);
       asp = new ArrayList<>();
       for (int i = 0; i < min.size() ; i++) {
         double value=JMetalRandom.getInstance().nextDouble(min.get(i),max.get(i));
         asp.add(value);
       }
     }
+    else{
+      if (aspFile != null) {
 
-
+        asp = this.getAspirationLevel(aspFile).get(aspOrden);
+     /* List<List<Double>> auxAsp=this.getAspirationLevel(aspFile);
+      List<Double> min = auxAsp.get(0);
+      List<Double> max = auxAsp.get(2);
+      asp = new ArrayList<>();
+      for (int i = 0; i < min.size() ; i++) {
+        double value=JMetalRandom.getInstance().nextDouble(min.get(i),max.get(i));
+        asp.add(value);
+      }*/
+      }
+    }
     this.aspList = asp;
     if(asp!=null){
       this.asp= new IdealPoint(numberOfObjectives);
@@ -143,26 +157,48 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
       asp = idealOjectiveVector;
   }
 
+  private IdealPoint createReferencePointIdeal(List<Double> list){
+    IdealPoint solution =  new IdealPoint(numberOfObjectives);
+    for (int i = 0; i < list.size() ; i++) {
+      solution.setObjective(i,list.get(i));
+      solution.setVariableValue(i,list.get(i));
+    }
+    return solution;
+  }
+  private NadirPoint createReferencePointNadir(List<Double> list){
+    NadirPoint solution =  new NadirPoint(numberOfObjectives);
+    for (int i = 0; i < list.size() ; i++) {
+      solution.setObjective(i,list.get(i));
+      solution.setVariableValue(i,list.get(i));
+    }
+    return solution;
+  }
   @Override
   protected List<ReferencePoint> generatePreferenceInformation() {
 
-    idealOjectiveVector = new IdealPoint(numberOfObjectives);
-    nadirObjectiveVector = new NadirPoint(numberOfObjectives);
+    idealOjectiveVector = createReferencePointIdeal(min);//new IdealPoint(numberOfObjectives);
+    nadirObjectiveVector = createReferencePointNadir(max);
 
     List<S> solutions = new ArrayList<>();
     S sol = problem.createSolution();
     problem.evaluate(sol);
     solutions.add(sol);
-    updateObjectiveVector(solutions);
+   // updateObjectiveVector(solutions);
     // solutionRun = solutions.get(0);
     List<ReferencePoint> referencePoints  = new ArrayList<>();
     for (int i=0;i < numberReferencePoints;i++){
       ReferencePoint referencePoint = new IdealPoint(numberOfObjectives);
       for (int j = 0; j < numberOfObjectives; j++) {
         double rand = random.nextDouble(0.0, 1.0);
+      //  double mult=0.25;
+       // if(j==1){
+        //  mult=10;
+       // }
         if (rand < considerationProbability * rankingCoeficient.get(i)) {
           referencePoint.setObjective(j, asp.getObjective(j));
+        //  referencePoint.setObjective(j, nadirObjectiveVector.getObjective(j)*mult);
         } else {
+          //referencePoint.setObjective(j, nadirObjectiveVector.getObjective(j));
           referencePoint.setObjective(j, nadirObjectiveVector.getObjective(j));
         }
       }
@@ -198,6 +234,7 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
   }
   @Override
   protected void initProgress() {
+    this.distances = new ArrayList<>();
     evaluations =0;
     varyingProbability = considerationProbability;
   }
@@ -211,8 +248,12 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
   protected List<Integer> relevantObjectiveFunctions(List<S> front) {
     List<Integer> order = new ArrayList<>();
     List<Integer> indexRelevantObjectivesFunctions = new ArrayList<>();
+    /*Solution s = front.get(0);
+    for (int i = 0; i < s.getNumberOfObjectives() ; i++) {
+      indexRelevantObjectivesFunctions.add(i);
+    }*/
     //updateObjectiveVector(front);
-    SortedMap<Double, List<Integer>> map = new TreeMap<>(Collections.reverseOrder());
+   SortedMap<Double, List<Integer>> map = new TreeMap<>(Collections.reverseOrder());
     for (int i = 0; i < rankingCoeficient.size(); i++) {
       List<Integer> aux = map.getOrDefault(rankingCoeficient.get(i), new ArrayList<>());
       aux.add(i);
@@ -272,7 +313,7 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
      pso.run();
          DoubleSolution psoSolution = pso.getResult();
 
-    distances.add(psoSolution.getObjective(0));
+  //  distances.add(psoSolution.getObjective(0));
 
     /*DifferentialEvolutionSelection selection;
     DifferentialEvolutionCrossover crossover;
@@ -293,21 +334,31 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
         .build() ;
     de.run();
      DoubleSolution psoSolution = de.getResult();*/
+    S solution = null;
+    // if(solutionRun!=null) {
+   // if(distances.isEmpty()){
+   //   solution=getMaxSolution(temporal, currentReferencePoint);
+   // }else {
+      solution = getSolution(temporal, currentReferencePoint);
+  //  }
+    solutionRun = solution;
     for(int numRefPoint=0;numRefPoint<numberReferencePoints;numRefPoint++){
      // S sol = problem.createSolution();
-      if(solutionRun!=null) {
-
-
-      //  calculateDistance(solutionRun, asp);
+      if(solutionRun!=null) {//currentReferencePoint
+        // calculateDistanceRP(currentReferencePoint, asp);
+        calculateDistance(solutionRun, asp);
         // calculateDistanceRP(solutionRun, currentReferencePoint);
       }
-      S solution = getSolution(temporal,currentReferencePoint);
-      solutionRun = solution;
+
+      //}else{
+       // solution = getMaxSolution(temporal, currentReferencePoint);//front.get(JMetalRandom.getInstance().nextInt(0,front.size()-1));
+      //}
+
       //temporal.remove(solution);
       // if (indexOfRelevantObjectiveFunctions.size() == numberOfObjectives) {
       // result.add(getReferencePointFromSolution(solution));
       //} else {
-      ReferencePoint referencePoint = new IdealPoint(numberOfObjectives);
+      ReferencePoint referencePoint = new NadirPoint(numberOfObjectives);
       for (int i = 0; i < referencePoint.getNumberOfObjectives(); i++) {
         if (indexOfRelevantObjectiveFunctions.contains(i)) {
           //referencePoint.setObjective(i,asp.getObjective(i) - (asp.getObjective(i) - solution.getObjective(i)) / 2);
@@ -320,7 +371,7 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
           //double pred =prediction(i,paretoOptimalSolutions,solution);
           //double cal= asp.getObjective(i) - (asp.getObjective(i) - solution.getObjective(i)) / 2;
           //referencePoint.setObjective(i, Math.abs(pred-asp.getObjective(i)) <= Math.abs(cal-asp.getObjective(i)) ? pred : cal);
-           referencePoint.setObjective(i, prediction(i,paretoOptimalSolutions,solutionRun));
+           referencePoint.setObjective(i, prediction(i,front,solutionRun));//paretoOptimalSolutions
           //referencePoint.setObjective(i,
            //   psoSolution.getVariableValue(i));
           //referencePoint.setObjective(i, predictionDouble(i,prueba,psoSolution));
@@ -347,6 +398,8 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
     //double distance = euclideanDistance.compute(getPointFromSolution(solution),
     //    getPointFromReferencePoint(referencePoint));
     double distance = euclidean.getDistance((DoubleSolution)solution,getSolutionFromRP(referencePoint));
+    distances.add(distance);
+   System.out.println(distance);
    // distances.add(distance);
   }
 
@@ -357,7 +410,7 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
     //double distance = euclideanDistance.compute(getPointFromSolution(solution),
     //    getPointFromReferencePoint(referencePoint));
     double distance = euclidean.getDistance(solution,getSolutionFromRP(referencePoint));
-    System.out.println("Distancia "+distance);
+    //System.out.println("Distancia "+distance);
 
   }
 
@@ -436,14 +489,33 @@ public class ArtificialDecisionMakerPSO<S extends Solution<?>> extends
    // EuclideanDistance euclideanDistance = new EuclideanDistance();
     SortedMap<Double, S> map = new TreeMap<>();
     DoubleSolution aux = getSolutionFromRP(referencePoint);
+    double suma=0;
     for (S solution : front) {
      // double distance = euclideanDistance.compute(getPointFromSolution(solution),
      //     getPointFromReferencePoint(referencePoint));
      // map.put(distance, solution);
       double distance = euclidean.getDistance(solution,aux);
+      suma+=distance;
       map.put(distance, solution);
     }
+  //  System.out.println("Sumaaaaaaaaaaaaaa "+suma);
     result = map.get(map.firstKey());
+    return result;
+  }
+  private S getMaxSolution(List<S> front, ReferencePoint referencePoint) {
+    S result = front.get(0);
+    EuclideanDistanceBetweenSolutionsInObjectiveSpace euclidean = new EuclideanDistanceBetweenSolutionsInObjectiveSpace();
+    // EuclideanDistance euclideanDistance = new EuclideanDistance();
+    SortedMap<Double, S> map = new TreeMap<>();
+    DoubleSolution aux = getSolutionFromRP(referencePoint);
+    for (S solution : front) {
+      // double distance = euclideanDistance.compute(getPointFromSolution(solution),
+      //     getPointFromReferencePoint(referencePoint));
+      // map.put(distance, solution);
+      double distance = euclidean.getDistance(solution,aux);
+      map.put(distance, solution);
+    }
+    result = map.get(map.lastKey());
     return result;
   }
 

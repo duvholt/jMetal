@@ -210,7 +210,7 @@ public class ArtificialDM<S extends Solution<?>> extends ArtificialDecisionMaker
                 asp.getObjective(i) - (asp.getObjective(i) - solution.getObjective(i)) / 2);
           } else {
             //predict the i position of reference point
-            referencePoint.setObjective(i, prediction(i,paretoOptimalSolutions,solution));
+            referencePoint.setObjective(i, prediction(i,front,solution));//paretoOptimalSolutions
           }
         }
         calculateDistance(solutionRun,asp);
