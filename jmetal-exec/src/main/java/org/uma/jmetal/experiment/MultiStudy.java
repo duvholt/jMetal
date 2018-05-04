@@ -50,6 +50,7 @@ import org.uma.jmetal.util.experiment.component.GenerateLatexTablesWithStatistic
 import org.uma.jmetal.util.experiment.component.GenerateWilcoxonTestTablesWithR;
 import org.uma.jmetal.util.experiment.util.ExperimentAlgorithm;
 import org.uma.jmetal.util.experiment.util.ExperimentProblem;
+import org.uma.jmetal.util.neighborhood.impl.C9;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -82,8 +83,8 @@ public class MultiStudy {
         UF
     }
 
-    private static final int INDEPENDENT_RUNS = 1;
-    private static StudyType currentStudy = StudyType.UF;
+    private static final int INDEPENDENT_RUNS = 30;
+    private static StudyType currentStudy = StudyType.DTLZ;
     private static boolean enableSMPSO = false; // SMPSO is super slow
 
     public static void main(String[] args) throws IOException {
@@ -161,6 +162,15 @@ public class MultiStudy {
         new GenerateBoxplotsWithR<>(experiment).setRows(3).setColumns(3).setDisplayNotch().run();
     }
 
+    private static int calculatePopulationFromObjectives(int objectives) {
+        if (objectives == 2) {
+            return 100;
+        } else if (objectives == 3) {
+            return 150;
+        }
+        throw new IllegalArgumentException("Only two or three objectives are supported");
+    }
+
     /**
      * The algorithm list is composed of pairs {@link Algorithm} + {@link Problem} which form part of
      * a {@link ExperimentAlgorithm}, which is a decorator for class {@link Algorithm}.
@@ -171,10 +181,11 @@ public class MultiStudy {
         // AbYSS
         for (ExperimentProblem<DoubleSolution> aProblemList1 : problemList) {
             Archive<DoubleSolution> archive = new CrowdingDistanceArchive<DoubleSolution>(100);
+            int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
 
             ABYSS algorithm = new ABYSSBuilder((DoubleProblem) aProblemList1.getProblem(), archive)
                     .setMaxEvaluations(300000)
-                    .setPopulationSize(100)
+                    .setPopulationSize(populationSize)
                     .build();
             algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
 
@@ -190,15 +201,18 @@ public class MultiStudy {
             PolynomialMutation mutation = new PolynomialMutation(mutationProbability, mutationDistributionIndex);
 
             BinaryTournamentSelection<DoubleSolution> selection = new BinaryTournamentSelection<DoubleSolution>(new RankingAndCrowdingDistanceComparator<DoubleSolution>());
+            int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
+            populationSize = (int) Math.pow(Math.floor(Math.sqrt(populationSize)), 2);
 
             MOCell<DoubleSolution> algorithm = new MOCellBuilder<DoubleSolution>(aProblemList1.getProblem(), crossover, mutation)
                     .setSelectionOperator(selection)
                     .setMaxEvaluations(300000)
-                    .setPopulationSize(100)
-                    .setArchive(new CrowdingDistanceArchive<DoubleSolution>(100))
+                    .setPopulationSize(populationSize)
+                    .setArchive(new CrowdingDistanceArchive<DoubleSolution>(populationSize))
+                    .setNeighborhood(new C9<DoubleSolution>((int)Math.sqrt(populationSize), (int)Math.sqrt(populationSize)))
                     .build();
 
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
         }
 
         // MOEA/DD
@@ -210,19 +224,20 @@ public class MultiStudy {
             double mutationProbability = 1.0 / aProblemList1.getProblem().getNumberOfVariables();
             double mutationDistributionIndex = 20.0;
             PolynomialMutation mutation = new PolynomialMutation(mutationProbability, mutationDistributionIndex);
+            int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
 
             Algorithm<List<DoubleSolution>> algorithm = new MOEADBuilder(aProblemList1.getProblem(), MOEADBuilder.Variant.MOEADD)
                     .setCrossover(crossover)
                     .setMutation(mutation)
                     .setMaxEvaluations(300000)
                     .setPopulationSize(100)
-                    .setResultPopulationSize(100)
+                    .setResultPopulationSize(populationSize)
                     .setNeighborhoodSelectionProbability(0.9)
                     .setMaximumNumberOfReplacedSolutions(1)
                     .setNeighborSize(20)
                     .setFunctionType(AbstractMOEAD.FunctionType.PBI)
                     .setDataDirectory("MOEAD_Weights").build();
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
         }
 
         // NSGAIII
@@ -237,51 +252,63 @@ public class MultiStudy {
             PolynomialMutation mutation = new PolynomialMutation(mutationProbability, mutationDistributionIndex);
 
             BinaryTournamentSelection<DoubleSolution> selection = new BinaryTournamentSelection<DoubleSolution>();
+            int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
+            int iterations = 18750;
+            if (aProblemList1.getProblem().getNumberOfObjectives() == 3) {
+                iterations = 3261;
+            }
 
             NSGAIII<DoubleSolution> algorithm = new NSGAIIIBuilder<>(aProblemList1.getProblem())
                     .setCrossoverOperator(crossover)
                     .setMutationOperator(mutation)
                     .setSelectionOperator(selection)
-                    .setMaxIterations(18750)
-                    .setPopulationSize(100)
+                    .setMaxIterations(iterations)
+                    .setPopulationSize(populationSize)
                     .build();
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
         }
         // NSGAII
         for (ExperimentProblem<DoubleSolution> aProblemList1 : problemList) {
+            int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
             Algorithm<List<DoubleSolution>> algorithm = new NSGAIIBuilder<DoubleSolution>(
                     aProblemList1.getProblem(),
                     new SBXCrossover(1.0, 20.0),
                     new PolynomialMutation(1.0 / aProblemList1.getProblem().getNumberOfVariables(), 20.0))
                     .setMaxEvaluations(300000)
-                    .setPopulationSize(100)
+                    .setPopulationSize(populationSize)
                     .build();
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
         }
 
         // PAES
         for (ExperimentProblem<DoubleSolution> aProblemList : problemList) {
 
             PolynomialMutation mutation = new PolynomialMutation(1.0 / aProblemList.getProblem().getNumberOfVariables(), 20.0);
+            int populationSize = calculatePopulationFromObjectives(aProblemList.getProblem().getNumberOfObjectives());
 
             PAES<DoubleSolution> algorithm = new PAESBuilder<DoubleSolution>(aProblemList.getProblem())
                     .setMutationOperator(mutation)
                     .setMaxEvaluations(300000)
-                    .setArchiveSize(100)
+                    .setArchiveSize(populationSize)
                     .setBiSections(5)
                     .build();
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList.getTag()));
         }
 
         // SMPSO
         for (ExperimentProblem<DoubleSolution> aProblemList : problemList) {
             double mutationProbability = 1.0 / aProblemList.getProblem().getNumberOfVariables();
             double mutationDistributionIndex = 20.0;
+            int populationSize = calculatePopulationFromObjectives(aProblemList.getProblem().getNumberOfObjectives());
+            int iterations = 3000;
+            if (aProblemList.getProblem().getNumberOfObjectives() == 3) {
+                iterations = 2000;
+            }
             Algorithm<List<DoubleSolution>> algorithm = new SMPSOBuilder((DoubleProblem) aProblemList.getProblem(),
                     new CrowdingDistanceArchive<DoubleSolution>(100))
                     .setMutation(new PolynomialMutation(mutationProbability, mutationDistributionIndex))
-                    .setMaxIterations(3000)
-                    .setSwarmSize(100)
+                    .setMaxIterations(iterations)
+                    .setSwarmSize(populationSize)
                     .setSolutionListEvaluator(new SequentialSolutionListEvaluator<DoubleSolution>())
                     .build();
             if (enableSMPSO) {
@@ -291,14 +318,19 @@ public class MultiStudy {
 
         // SPEA2
         for (ExperimentProblem<DoubleSolution> aProblemList : problemList) {
+            int populationSize = calculatePopulationFromObjectives(aProblemList.getProblem().getNumberOfObjectives());
+            int iterations = 3000;
+            if (aProblemList.getProblem().getNumberOfObjectives() == 3) {
+                iterations = 2000;
+            }
             Algorithm<List<DoubleSolution>> algorithm = new SPEA2Builder<DoubleSolution>(
                     aProblemList.getProblem(),
                     new SBXCrossover(1.0, 10.0),
                     new PolynomialMutation(1.0 / aProblemList.getProblem().getNumberOfVariables(), 20.0))
-                    .setMaxIterations(3000)
-                    .setPopulationSize(100)
+                    .setMaxIterations(iterations)
+                    .setPopulationSize(populationSize)
                     .build();
-//            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList.getTag()));
+            algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList.getTag()));
         }
         return algorithms;
     }
