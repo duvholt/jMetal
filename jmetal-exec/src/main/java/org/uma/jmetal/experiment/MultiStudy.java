@@ -117,6 +117,8 @@ public class MultiStudy {
             problemList.add(new ExperimentProblem<>(new UF6(30, 2, 0.1)));
             problemList.add(new ExperimentProblem<>(new UF7(30)));
             problemList.add(new ExperimentProblem<>(new UF8(30)));
+            problemList.add(new ExperimentProblem<>(new UF9(30, 0.1)));
+            problemList.add(new ExperimentProblem<>(new UF10(30)));
             referenceFrontFileNames = Arrays.asList("UF1.pf", "UF2.pf", "UF3.pf", "UF4.pf", "UF5.pf", "UF6.pf", "UF7.pf", "UF8.pf", "UF9.pf", "UF10.pf");
         }
 
