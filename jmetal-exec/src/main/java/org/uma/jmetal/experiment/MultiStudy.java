@@ -87,14 +87,7 @@ public class MultiStudy {
     private static boolean enableSMPSO = false; // SMPSO is super slow
 
     public static void main(String[] args) throws IOException {
-        String experimentBaseDirectory = null;
-        if (currentStudy == StudyType.ZDT) {
-            experimentBaseDirectory = "MultiStudy/zdt";
-        } else if (currentStudy == StudyType.DTLZ) {
-            experimentBaseDirectory = "MultiStudy/dtlz";
-        } else if (currentStudy == StudyType.UF) {
-            experimentBaseDirectory = "MultiStudy/uf";
-        }
+        String experimentBaseDirectory = "MultiStudy";
 
         List<ExperimentProblem<DoubleSolution>> problemList = new ArrayList<>();
         List<String> referenceFrontFileNames = null;
@@ -131,8 +124,17 @@ public class MultiStudy {
                 configureAlgorithmList(problemList);
 
 
+        String experimentName = null;
+        if (currentStudy == StudyType.ZDT) {
+            experimentName = "zdt";
+        } else if (currentStudy == StudyType.DTLZ) {
+            experimentName = "dtlz";
+        } else if (currentStudy == StudyType.UF) {
+            experimentName = "uf";
+        }
+
         Experiment<DoubleSolution, List<DoubleSolution>> experiment =
-                new ExperimentBuilder<DoubleSolution, List<DoubleSolution>>("MultiStudy")
+                new ExperimentBuilder<DoubleSolution, List<DoubleSolution>>(experimentName)
                         .setAlgorithmList(algorithmList)
                         .setProblemList(problemList)
                         .setReferenceFrontDirectory("/pareto_fronts")
