@@ -182,12 +182,12 @@ public class MultiStudy {
         List<ExperimentAlgorithm<DoubleSolution, List<DoubleSolution>>> algorithms = new ArrayList<>();
         // AbYSS
         for (ExperimentProblem<DoubleSolution> aProblemList1 : problemList) {
-            Archive<DoubleSolution> archive = new CrowdingDistanceArchive<DoubleSolution>(100);
             int populationSize = calculatePopulationFromObjectives(aProblemList1.getProblem().getNumberOfObjectives());
+            Archive<DoubleSolution> archive = new CrowdingDistanceArchive<DoubleSolution>(populationSize);
 
             ABYSS algorithm = new ABYSSBuilder((DoubleProblem) aProblemList1.getProblem(), archive)
                     .setMaxEvaluations(300000)
-                    .setPopulationSize(populationSize)
+                    .setArchiveSize(populationSize)
                     .build();
             algorithms.add(new ExperimentAlgorithm<>(algorithm, aProblemList1.getTag()));
 
@@ -307,10 +307,10 @@ public class MultiStudy {
                 iterations = 2000;
             }
             Algorithm<List<DoubleSolution>> algorithm = new SMPSOBuilder((DoubleProblem) aProblemList.getProblem(),
-                    new CrowdingDistanceArchive<DoubleSolution>(100))
+                    new CrowdingDistanceArchive<DoubleSolution>(populationSize))
                     .setMutation(new PolynomialMutation(mutationProbability, mutationDistributionIndex))
                     .setMaxIterations(iterations)
-                    .setSwarmSize(populationSize)
+                    .setSwarmSize(100)
                     .setSolutionListEvaluator(new SequentialSolutionListEvaluator<DoubleSolution>())
                     .build();
             if (enableSMPSO) {
